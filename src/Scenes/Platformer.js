@@ -6,51 +6,83 @@ class Platformer extends Phaser.Scene {
     create() {
         // Load the tilemap
         this.map = this.add.tilemap("map");
-    
-        // Add the tileset (ensure the first parameter matches the tileset name in the JSON)
         this.tileset = this.map.addTilesetImage("tiny-town-packed", "tiny_town_tiles");
-    
-        // Create the layer (ensure the layer name matches the JSON)
         this.grassLayer = this.map.createLayer("Grass-n-Houses", this.tileset, 0, 0);
-
         this.grassLayer.setScale(4);
-
-        my.sprite.player = this.add.sprite(game.config.width/2, game.config.height/2, "platformer_characters", "tile_0000.png").setScale(SCALE);
-        
-        cursors = this.input.keyboard.createCursorKeys();
+    
+        // Define tile size (scaled)
+        this.TILE_SIZE = 16 * 4; // Original tile size * scale
+    
+        // Add player sprite, aligned to the center of a tile
+        this.player = this.add.sprite(
+            this.TILE_SIZE * 5 + this.TILE_SIZE / 2, // Starting tile (column 5, centered)
+            this.TILE_SIZE * 5 + this.TILE_SIZE / 2, // Starting tile (row 5, centered)
+            "platformer_characters",
+            "tile_0000.png"
+        ).setScale(SCALE);
+    
+        // Add keyboard controls
+        this.cursors = this.input.keyboard.createCursorKeys();
+    
+        // Track movement state
+        this.isMoving = false; // Prevent multiple inputs at the same time
     }
     
-
-    // Never get here since a new scene is started in create()
     update() {
-
-        if (cursors.left.isDown){
-            my.sprite.player.flipX = false;
-            my.sprite.player.x -= 2;
-            my.sprite.player.anims.play('walk', true);
-            console.log(my.sprite.player.x);
+        // Ensure only one movement at a time
+        if (!this.isMoving) {
+            if (this.cursors.left.isDown) {
+                this.isMoving = true;
+                this.movePlayer(-1, 0); // Move left
+            } else if (this.cursors.right.isDown) {
+                this.isMoving = true;
+                this.movePlayer(1, 0); // Move right
+            } else if (this.cursors.up.isDown) {
+                this.isMoving = true;
+                this.movePlayer(0, -1); // Move up
+            } else if (this.cursors.down.isDown) {
+                this.isMoving = true;
+                this.movePlayer(0, 1); // Move down
+            }
         }
-        if (cursors.right.isDown){
-            my.sprite.player.flipX = true;
-            my.sprite.player.x += 2;
-            my.sprite.player.anims.play('walk', true);
-            console.log(my.sprite.player.x);
-        }
-        if (cursors.up.isDown){
-            my.sprite.player.y -= 2;
-            my.sprite.player.anims.play('walk', true);
-            console.log(my.sprite.player.y);
-        }
-        if (cursors.down.isDown){
-            my.sprite.player.y += 2;
-            my.sprite.player.anims.play('walk', true);
-            console.log(my.sprite.player.y);
-        }
-
-        if (cursors.left.isUp && cursors.right.isUp && cursors.up.isUp && cursors.down.isUp){
-            my.sprite.player.anims.play('idle', true);
-        }
-        
-
     }
+    
+    // Function to move the player
+    movePlayer(deltaX, deltaY) {
+        // Calculate new position
+        const newX = this.player.x + deltaX * this.TILE_SIZE;
+        const newY = this.player.y + deltaY * this.TILE_SIZE;
+    
+        // Get canvas dimensions
+        const canvasWidth = game.config.width;
+        const canvasHeight = game.config.height;
+    
+        // Boundary checks
+        const halfTile = this.TILE_SIZE / 2;
+        if (
+            newX - halfTile < 0 || // Left boundary
+            newX + halfTile > canvasWidth || // Right boundary
+            newY - halfTile < 0 || // Top boundary
+            newY + halfTile > canvasHeight // Bottom boundary
+        ) {
+            // If out of bounds, do nothing
+            this.isMoving = false;
+            return;
+        }
+    
+        // Move player to new position (centered on tile)
+        this.tweens.add({
+            targets: this.player,
+            x: newX,
+            y: newY,
+            duration: 200, // Smooth movement
+            onComplete: () => {
+                this.isMoving = false; // Allow next movement
+            },
+        });
+    }
+    
+    
+
+    
 }
