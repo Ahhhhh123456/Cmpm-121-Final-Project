@@ -19,20 +19,10 @@ let config = {
     render: {
         pixelArt: true  // prevent pixel art from getting blurred when scaled
     },
-    physics: {
-        default: 'arcade',
-        arcade: {
-            debug: true,
-            gravity: {
-                x: 0,
-                y: 0
-            }
-        }
-    },
-    width: 2525,
+    width: 640,
     //width:1440,
-    height: 825,
-    scene: [Platformer]
+    height: 640,
+    scene: [Load, Platformer]
 
 }
 
