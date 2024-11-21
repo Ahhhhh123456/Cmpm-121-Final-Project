@@ -1,3 +1,45 @@
+class Tile {
+    constructor() {
+        this.sunLevel = 0;
+        this.waterLevel = 0;
+        this.plantType = this.getRandomPlantType();
+        this.growthLevel = 1; // Starting growth level
+    }
+
+    getRandomPlantType() {
+        const plantTypes = ["species1", "species2", "species3"];
+        return plantTypes[Math.floor(Math.random() * plantTypes.length)];
+    }
+
+    updateLevels() {
+        // Randomly generate incoming sun and water (values between 0 and 10 for example)
+        const incomingSun = Math.floor(Math.random() * 11);
+        const incomingWater = Math.floor(Math.random() * 11);
+
+        // Update sun level (use immediately or lose)
+        this.sunLevel = incomingSun;
+
+        // Update water level (accumulate over turns)
+        this.waterLevel += incomingWater;
+
+        // Log the updated sun and water levels
+        console.log(`Tile updated - Sun: ${this.sunLevel}, Water: ${this.waterLevel}`);
+
+        // Update growth level based on sun and water levels
+        this.updateGrowthLevel();
+    }
+
+    updateGrowthLevel() {
+        // Example logic to update growth level
+        if (this.sunLevel > 5 && this.waterLevel > 5) {
+            this.growthLevel = Math.min(this.growthLevel + 1, 3); // Max growth level is 3
+        }
+
+        // Log the updated growth level
+        console.log(`Plant type: ${this.plantType}, Growth level: ${this.growthLevel}`);
+    }
+}
+
 class Platformer extends Phaser.Scene {
     constructor() {
         super("platformerScene");
@@ -26,6 +68,16 @@ class Platformer extends Phaser.Scene {
     
         // Track movement state
         this.isMoving = false; // Prevent multiple inputs at the same time
+
+        // Create a grid of Tile objects
+        this.grid = [];
+        for (let i = 0; i < this.map.height; i++) {
+            const row = [];
+            for (let j = 0; j < this.map.width; j++) {
+                row.push(new Tile());
+            }
+            this.grid.push(row);
+        }
     }
     
     update() {
@@ -43,6 +95,13 @@ class Platformer extends Phaser.Scene {
             } else if (this.cursors.down.isDown) {
                 this.isMoving = true;
                 this.movePlayer(0, 1); // Move down
+            }
+        }
+
+        // Update sun and water levels for each tile
+        for (let i = 0; i < this.grid.length; i++) {
+            for (let j = 0; j < this.grid[i].length; j++) {
+                this.grid[i][j].updateLevels();
             }
         }
     }
@@ -81,8 +140,4 @@ class Platformer extends Phaser.Scene {
             },
         });
     }
-    
-    
-
-    
 }
