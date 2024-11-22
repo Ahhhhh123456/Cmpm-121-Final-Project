@@ -103,7 +103,7 @@ class Platformer extends Phaser.Scene {
     }
 
     generateFlowerTile() {
-        const flowerTileIndex = 26;
+        const flowerTileIndex = 3;
         const randomRow = Phaser.Math.Between(1, this.rows - 2);
         const randomCol = Phaser.Math.Between(1, this.cols - 2);
 
