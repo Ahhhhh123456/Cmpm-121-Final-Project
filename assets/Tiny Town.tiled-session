@@ -8,16 +8,19 @@
         "."
     ],
     "fileStates": {
+        "": {
+            "scaleInEditor": 1
+        },
         "Tiny Town.tmx": {
             "scale": 2.44625,
-            "selectedLayer": 2,
+            "selectedLayer": 0,
             "viewCenter": {
-                "x": 208.27797649463466,
-                "y": 152.06949412365867
+                "x": 117.93561573837508,
+                "y": 151.04752171691365
             }
         },
         "Tiny Town.tmx#tiny-town-packed": {
-            "scaleInDock": 1
+            "scaleInDock": 1.5
         },
         "TinyTownMap.json": {
             "scale": 2.44625,
