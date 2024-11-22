@@ -29,9 +29,19 @@ class Tile {
         );
     }
 
-    updateGrowthLevel() {
-        if (this.sunLevel > 5 && this.waterLevel > 5) {
-            this.growthLevel = Math.min(this.growthLevel + 1, 3); // Max growth level is 3
+    // Pass neighboring tiles to evaluate growth conditions
+    updateGrowthLevel(neighbors) {
+        const neighboringPlants = neighbors.filter(
+            (neighbor) => neighbor.plantType !== null
+        ).length;
+
+        // Example growth conditions
+        if (
+            this.sunLevel > 5 &&
+            this.waterLevel > 5 &&
+            neighboringPlants >= 2
+        ) {
+            this.growthLevel = Math.min(this.growthLevel + 1, 3); // Max level 3
         }
     }
 }
@@ -146,7 +156,32 @@ class Platformer extends Phaser.Scene {
             this.generateFlowerTile();
             this.moveCount = 0;
         }
+
+    // Utility to find neighboring tiles
+    getNeighbors(row, col); {
+        const neighbors = [];
+        const directions = [
+            [-1, 0], // up
+            [1, 0], // down
+            [0, -1], // left
+            [0, 1], // right
+        ];
+
+        directions.forEach(([dRow, dCol]) => {
+            const nRow = row + dRow;
+            const nCol = col + dCol;
+            if (
+                nRow >= 0 &&
+                nRow < this.rows &&
+                nCol >= 0 &&
+                nCol < this.cols
+            ) {
+                neighbors.push(this.grid[nRow][nCol]);
+            }
+        });
+    return neighbors;
     }
+}
 
     update() {
         if (!this.isMoving) {
@@ -182,5 +217,34 @@ class Platformer extends Phaser.Scene {
 
         // Update sun and water levels for each tile
         this.grid.forEach((row) => row.forEach((tile) => tile.updateLevels()));
+
+        // Check completion conditions
+        if (this.checkWinCondition()) {
+            console.log("You win!");
+        // Optionally: Restart game or proceed to the next level
+        }
+
+        // neighboring tile evaluation
+        this.grid.forEach((row, rowIndex) =>
+            row.forEach((tile, colIndex) => {
+                const neighbors = this.getNeighbors(rowIndex, colIndex);
+                tile.updateLevels();
+                tile.updateGrowthLevel(neighbors);
+            })
+        );
+        // Win condition: At least 5 plants at growth level 3
+        checkWinCondition(); {
+            let highLevelPlants = 0;
+
+            this.grid.forEach((row) =>
+                row.forEach((tile) => {
+                    if (tile.growthLevel === 3) {
+                        highLevelPlants++;
+                    }
+                })
+            );
+
+            return highLevelPlants >= 5;
+        }
     }
 }
