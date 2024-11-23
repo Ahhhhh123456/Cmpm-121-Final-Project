@@ -25,7 +25,7 @@ class Tile {
 
     // Log the current state of the tile
     console.log(
-      `Tile updated - Sun: ${this.sunLevel}, Water: ${this.waterLevel}, Plant: ${this.plantType}, Growth: ${this.growthLevel}`,
+      //`Tile updated - Sun: ${this.sunLevel}, Water: ${this.waterLevel}, Plant: ${this.plantType}, Growth: ${this.growthLevel}`,
     );
   }
 
@@ -49,6 +49,8 @@ class Tile {
 class Platformer extends Phaser.Scene {
   constructor() {
     super("platformerScene");
+    this.reapedFlowers = 0;
+    this.waterLevel = 0;
   }
 
   create() {
@@ -106,20 +108,13 @@ class Platformer extends Phaser.Scene {
     this.randomizeInnerTiles();
   }
 
-  // Win condition: At least 5 plants at growth level 3
+  // Win condition: When 30 flowers have been reaped
   checkWinCondition() {
-    let highLevelPlants = 0;
-
-    this.grid.forEach((row) =>
-      row.forEach((tile) => {
-        if (tile.growthLevel === 3) {
-          highLevelPlants++;
-        }
-      })
-    );
-
-    return highLevelPlants >= 5;
+    if (this.reapedFlowers >= 20) {
+        console.log("You win!");
+    }
   }
+
   // Utility to find neighboring tiles
   getNeighbors(row, col) {
     const neighbors = [];
@@ -199,15 +194,24 @@ class Platformer extends Phaser.Scene {
       onComplete: () => {
         this.isMoving = false;
         this.updateTiles(); // Update tiles after player moves
+        
       },
     });
 
     this.moveCount++;
 
-    // After 3 moves, generate a flower tile
-    if (this.moveCount >= 3) {
+    // After 5 moves, generate a flower tile
+    if (this.moveCount >= 5) {
       this.generateFlowerTile();
       this.moveCount = 0;
+
+      // Update levels for all tiles in the grid
+      this.grid.forEach((row) =>
+        row.forEach((tile) => {
+            tile.updateLevels();
+        })
+      );
+      console.log("New Sun, Water, Species, and Growth Levels!");
     }
   }
 
@@ -216,8 +220,7 @@ class Platformer extends Phaser.Scene {
     this.grid.forEach((row, rowIndex) =>
         row.forEach((tile, colIndex) => {
             const neighbors = this.getNeighbors(rowIndex, colIndex);
-            console.log(`Tile [${rowIndex}, ${colIndex}] has ${neighbors.length} neighbors`);
-            tile.updateLevels();
+            //console.log(`Tile [${rowIndex}, ${colIndex}] has ${neighbors.length} neighbors`);
             tile.updateGrowthLevel(neighbors);
         })
     );
@@ -231,38 +234,73 @@ class Platformer extends Phaser.Scene {
 
   update() {
     if (!this.isMoving) {
-      if (this.cursors.left.isDown) {
-        this.isMoving = true;
-        this.movePlayer(-1, 0);
-        this.player.setFlipX(false);
-      } else if (this.cursors.right.isDown) {
-        this.isMoving = true;
-        this.movePlayer(1, 0);
-        this.player.setFlipX(true);
-      } else if (this.cursors.up.isDown) {
-        this.isMoving = true;
-        this.movePlayer(0, -1);
-      } else if (this.cursors.down.isDown) {
-        this.isMoving = true;
-        this.movePlayer(0, 1);
-      }
+        if (this.cursors.left.isDown) {
+            this.isMoving = true;
+            this.movePlayer(-1, 0);
+            this.player.setFlipX(false);
+        } else if (this.cursors.right.isDown) {
+            this.isMoving = true;
+            this.movePlayer(1, 0);
+            this.player.setFlipX(true);
+        } else if (this.cursors.up.isDown) {
+            this.isMoving = true;
+            this.movePlayer(0, -1);
+        } else if (this.cursors.down.isDown) {
+            this.isMoving = true;
+            this.movePlayer(0, 1);
+        }
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
-      const playerTileX = Math.floor(this.player.x / this.TILE_SIZE);
-      const playerTileY = Math.floor(this.player.y / this.TILE_SIZE);
+        const playerTileX = Math.floor(this.player.x / this.TILE_SIZE);
+        const playerTileY = Math.floor(this.player.y / this.TILE_SIZE);
 
-      const tile = this.map.getTileAt(
-        playerTileX,
-        playerTileY,
-        this.grassLayer,
-      );
+        const tile = this.map.getTileAt(
+            playerTileX,
+            playerTileY,
+            true,
+            this.grassLayer
+        );
 
-      if (tile && tile.index === 3) {
-        // Reap flower
-        this.map.putTileAt(26, playerTileX, playerTileY, this.grassLayer);
-        console.log("Flower reaped!");
-      }
+        if (tile && tile.index === 3) {
+            // Access the tile object in the grid
+            const currentTile = this.grid[playerTileY][playerTileX];
+            const waterCount = currentTile.waterLevel;
+            const sunLevel = currentTile.sunLevel;
+            const growthLevel = currentTile.growthLevel;
+            const plantType = currentTile.plantType;
+
+            // Log the current tile's state
+            console.log(`Flower: Sun = ${sunLevel}, Water = ${waterCount}, Growth = ${growthLevel}, Species = ${plantType}`);
+
+            // Change the tile to a different type (e.g., grass)
+            this.map.putTileAt(26, playerTileX, playerTileY, true, this.grassLayer);
+
+            // Increment reaped flowers counter
+            this.reapedFlowers+= 1;
+
+            // Increment water level counter
+            this.waterLevel += waterCount;
+
+            console.log('Water Count:', this.waterLevel);
+
+            // Check win condition after reaping
+            this.checkWinCondition();
+
+        } else {
+            // Log tile details even if it's not a flower
+            const currentTile = this.grid[playerTileY][playerTileX];
+            const waterCount = currentTile.waterLevel;
+            const sunLevel = currentTile.sunLevel;
+            const growthLevel = currentTile.growthLevel;
+
+            console.log(`Non-Flower: Sun = ${sunLevel}, Water = ${waterCount}, Growth = ${growthLevel}`);
+
+            this.waterLevel += waterCount;
+
+            console.log('Water Count:', this.waterLevel);
+        }
     }
   }
+
 }
