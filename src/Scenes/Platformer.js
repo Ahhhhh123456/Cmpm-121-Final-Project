@@ -198,6 +198,7 @@ class Platformer extends Phaser.Scene {
       duration: 200,
       onComplete: () => {
         this.isMoving = false;
+        this.updateTiles(); // Update tiles after player moves
       },
     });
 
@@ -207,6 +208,24 @@ class Platformer extends Phaser.Scene {
     if (this.moveCount >= 3) {
       this.generateFlowerTile();
       this.moveCount = 0;
+    }
+  }
+
+  updateTiles() {
+    // Update sun, water, and growth levels for each tile
+    this.grid.forEach((row, rowIndex) =>
+        row.forEach((tile, colIndex) => {
+            const neighbors = this.getNeighbors(rowIndex, colIndex);
+            console.log(`Tile [${rowIndex}, ${colIndex}] has ${neighbors.length} neighbors`);
+            tile.updateLevels();
+            tile.updateGrowthLevel(neighbors);
+        })
+    );
+
+    // Check completion conditions
+    if (this.checkWinCondition()) {
+      console.log("You win!");
+      // Optionally: Restart game or proceed to the next level
     }
   }
 
@@ -244,22 +263,6 @@ class Platformer extends Phaser.Scene {
         this.map.putTileAt(26, playerTileX, playerTileY, this.grassLayer);
         console.log("Flower reaped!");
       }
-    }
-
-    // Update sun, water, and growth levels for each tile
-    this.grid.forEach((row, rowIndex) =>
-        row.forEach((tile, colIndex) => {
-            const neighbors = this.getNeighbors(rowIndex, colIndex);
-            console.log(`Tile [${rowIndex}, ${colIndex}] has ${neighbors.length} neighbors`);
-            tile.updateLevels();
-            tile.updateGrowthLevel(neighbors);
-        })
-    );
-
-    // Check completion conditions
-    if (this.checkWinCondition()) {
-      console.log("You win!");
-      // Optionally: Restart game or proceed to the next level
     }
   }
 }
