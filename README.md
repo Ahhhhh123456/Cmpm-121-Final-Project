@@ -61,3 +61,47 @@ focus on making the game fun and entertaining, however, similar to the class,
 the main focus will be on code style and code smells. We might also try to find
 a way to support controllers within our game as it will help people that are
 unable to use keyboard and mouse due to limitations with their body
+
+# F0 Devlog
+
+# How we satisfied the software requirements
+
+[F0.a]
+We created a 2d grid using tiles in Phaser, we made a randomizer, that spits out a randomized array of tiles that makes a board with plants everywhere. 
+We then used cursor.is.down on the arrow keys so the player is able to move around, up, down, left, and right.
+
+
+[F0.b] 
+We implemented a manual time that is turn-based by making it so that every 3 steps the player takes a flower will appear. 
+This simulates a turn-based as every player has as much time as they want every turn to play their next turn.
+
+
+[F0.c] 
+We made it so that when you press the space bar you reap a plant. 
+The plant gets removed from the plot, one space bar press will remove the plan on the grid you are currently on.
+
+
+[F0.d] 
+We implemented the water levels by randomly generating a number 1-10 every turn, the number then gets added to the water number and the water number will just keep increasing. 
+Furthermore, the sun level is randomly generated but not added to the value, the value gets reassigned every turn based on what the randomizer came up with.  
+
+
+[F0.e] 
+We implemented 3 different growth levels by making a function that checks the water and sun levels, and if there are neighboring plants, and increments them accordingly. 
+Additionally, we added plant types that get assigned to the plants when they are created. 
+
+
+[F0.f] Simple spatial rules govern plant growth based on sun, water, and nearby plants (growth is unlocked by satisfying conditions).
+We made the growth by making a function that checks the nearby tiles for plant growth, in addition to whether there is sun and water.  
+If the value for the sun level is greater than 5, the value for the water level is 5, and a number of adjacent plants is greater than or equal to 2. Then the the growth factor will grow by one. 
+
+
+[F0.g] 
+We made it so that once all the flowers on the screen were gone, the game ended and you won. 
+The whole point is to make sure all the flowers die, and can no longer grow back.
+
+
+# Reflection
+For our tools and materials, we are staying with Phaser and JavaScript and moving to Typescript and Deno. As for roles, we’re working perfectly fine. 
+For F0, we split the work evenly between us 3. This made it so that we worked on F0 on our own time. This made it hard for us to make everything work all at once. 
+We eventually solved it after several iterations of fixing it
