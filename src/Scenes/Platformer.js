@@ -127,41 +127,72 @@ class Platformer extends Phaser.Scene {
     const flowerTileId = 3; // Replace with the actual ID for flower tiles in Tiled
     this.grid.randomizeInnerTiles(this.map, this.grassLayer, flowerTileId);
 
-    // Player setup
-    this.TILE_SIZE = 16 * 4;
-    this.player = this.add.sprite(
-      this.TILE_SIZE * 5 + this.TILE_SIZE / 2,
-      this.TILE_SIZE * 5 + this.TILE_SIZE / 2,
-      "platformer_characters",
-      "tile_0000.png"
-    ).setScale(2);
+      // Player setup
+      this.TILE_SIZE = 16 * 4,
+      this.player = this.add.sprite(
+     
+        this.TILE_SIZE * 5 + this.TILE_SIZE / 2,
+        this.TILE_SIZE * 5 + this.TILE_SIZE / 2,
+        "platformer_characters",
+        "tile_0000.png"
+      ).setScale(2);
+  
+      // Movement state
+      this.isMoving = false;
+      this.cursors = this.input.keyboard.createCursorKeys();
+      this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+      this.sKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
+      this.lKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.L);
+  
+      // Check for auto-save on game start
+      this.checkAutoSave();
+      this.startAutoSave();
+    }
 
-    // Movement state
-    this.isMoving = false;
-    this.cursors = this.input.keyboard.createCursorKeys();
-    this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-    this.sKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
-    this.lKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.L);
+    startAutoSave() {
+      console.log("Game saved Automatically!");
+      this.autoSaveInterval = setInterval(() => {
+        this.autoSaveGame();
+      }, 30000);
+    }
+  
+    shutdown() {
+      clearInterval(this.autoSaveInterval); // Clear the auto-save interval when the scene is shut down
+    }
+  
+    saveGame(saveKey = 'gameState') {
+      const gameState = {
+        gridState: Array.from(this.grid.stateArray), // Convert to regular array to store in localStorage
+        playerPosition: {
+          x: this.player.x,
+          y: this.player.y,
+        },
+        stepsTaken: this.stepsTaken,
+        waterLevel: this.waterLevel,
+        reapedFlowers: this.reapedFlowers,
+        won: this.won,
+      };
+      localStorage.setItem(saveKey, JSON.stringify(gameState));
+      console.log("Game saved!");
+    }
+  
+    autoSaveGame() {
+      this.saveGame('autoSaveState');
+      console.log("Game auto-saved!");
+    }
+  
 
-
-    document.getElementById('description').innerHTML = '<h2>CMPM 121 Final Game</h2><br> Press <b> S </b> to save game. <br> <br>  Press <b> L </b> to load game.';
+  checkAutoSave() {
+    const autoSaveState = localStorage.getItem('autoSaveState');
+    if (autoSaveState) {
+      const continueGame = confirm("Do you want to continue where you left off?");
+      if (continueGame) {
+        this.loadGame('autoSaveState');
+      }
+    }
   }
 
-  saveGame() {
-    const gameState = {
-      gridState: Array.from(this.grid.stateArray), // Convert to regular array to store in localStorage
-      playerPosition: {
-        x: this.player.x,
-        y: this.player.y,
-      },
-      stepsTaken: this.stepsTaken,
-      waterLevel: this.waterLevel,
-      reapedFlowers: this.reapedFlowers,
-      won: this.won,
-    };
-    localStorage.setItem('gameState', JSON.stringify(gameState));
-    console.log("Game saved!");
-  }
+
 
   loadGame() {
     const savedGameState = localStorage.getItem('gameState');
