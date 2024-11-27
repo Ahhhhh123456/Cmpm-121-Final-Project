@@ -1,306 +1,391 @@
-class Tile {
-  constructor() {
-    this.sunLevel = 0;
-    this.waterLevel = 0;
-    this.plantType = this.getRandomPlantType();
-    this.growthLevel = 1; // Starting growth level
+class TileGrid {
+  constructor(rows, cols) {
+    this.rows = rows;
+    this.cols = cols;
+    this.totalTiles = rows * cols;
+
+    // Byte array format: [sunLevel, waterLevel, plantType, growthLevel] per tile
+    this.tileSize = 4; // Number of attributes per tile
+    this.stateArray = new Uint8Array(this.totalTiles * this.tileSize);
+
+    // Plant types are stored as indices
+    this.plantTypes = ["species1", "species2", "species3", "dirt"]; // Add "dirt" as the last entry
   }
 
-  getRandomPlantType() {
-    const plantTypes = ["species1", "species2", "species3"];
-    return plantTypes[Math.floor(Math.random() * plantTypes.length)];
+  getIndex(row, col) {
+    return (row * this.cols + col) * this.tileSize;
   }
 
-  updateLevels() {
-    // Randomly generate incoming sun and water (values between 0 and 10)
-    const incomingSun = Math.floor(Math.random() * 11);
-    const incomingWater = Math.floor(Math.random() * 11);
-
-    // Update sun and water levels
-    this.sunLevel = incomingSun;
-    this.waterLevel += incomingWater;
-
-    // Update growth level based on sun and water levels
-    this.updateGrowthLevel();
-
-    // Log the current state of the tile
-    console.log(
-      //`Tile updated - Sun: ${this.sunLevel}, Water: ${this.waterLevel}, Plant: ${this.plantType}, Growth: ${this.growthLevel}`,
-    );
+  getTile(row, col) {
+    const index = this.getIndex(row, col);
+    const plantTypeIndex = this.stateArray[index + 2];
+    return {
+      sunLevel: this.stateArray[index],
+      waterLevel: this.stateArray[index + 1],
+      plantType: this.plantTypes[plantTypeIndex], // Get plant type from the index
+      growthLevel: plantTypeIndex !== 3 ? this.stateArray[index + 3] : 0, // If not dirt, return growth level
+    };
   }
 
-  // Pass neighboring tiles to evaluate growth conditions
-  updateGrowthLevel(neighbors = []) {
-    const neighboringPlants = neighbors.filter(
-        (neighbor) => neighbor && neighbor.plantType !== null
-    ).length;
+  setTile(row, col, sunLevel, waterLevel, plantType, growthLevel) {
+    const index = this.getIndex(row, col);
+    this.stateArray[index] = sunLevel;
+    this.stateArray[index + 1] = waterLevel;
 
-    // Example growth conditions
-    if (
-        this.sunLevel > 5 &&
-        this.waterLevel > 5 &&
-        neighboringPlants >= 2
-    )   {
-        this.growthLevel = Math.min(this.growthLevel + 1, 3); // Max level 3
-        }
+    if (plantType) {
+      this.stateArray[index + 2] = this.plantTypes.indexOf(plantType);
+      this.stateArray[index + 3] = growthLevel;
+    } else {
+      this.stateArray[index + 2] = 3; // Set to "dirt"
+      this.stateArray[index + 3] = 0; // No growth for dirt
     }
+  }
+
+  randomizeInnerTiles(tilemap, layer, flowerTileId) {
+    for (let row = 1; row < this.rows - 1; row++) {
+      for (let col = 1; col < this.cols - 1; col++) {
+        const isFlower = Math.random() < 0.3; // 30% chance to generate a flower
+        if (isFlower) {
+          const randomSun = Math.floor(Math.random() * 11); // Random sun level (0-10)
+          const randomWater = Math.floor(Math.random() * 11); // Random water level (0-10)
+          const randomGrowth = Math.floor(Math.random() * 3) + 1; // Growth levels 1 to 3
+  
+          // Set the tile with random flower properties
+          this.setTile(row, col, randomSun, randomWater, "species1", randomGrowth);
+          tilemap.putTileAt(flowerTileId, col, row, true, layer); // Place flower in Tiled map layer
+        } else {
+          const randomSun = Math.floor(Math.random() * 11);
+          const randomWater = Math.floor(Math.random() * 11);
+  
+          // Set the tile with "dirt" (no plant, no growth)
+          this.setTile(row, col, randomSun, randomWater, "dirt", 0);
+        }
+      }
+    }
+  }
+
+  updateTile(row, col, neighbors) {
+    const tile = this.getTile(row, col);
+
+    if (tile.plantType !== "dirt") { // Only update non-dirt tiles (flowers)
+      const neighboringPlants = neighbors.filter((neighbor) => neighbor.plantType !== "dirt").length;
+
+      if (tile.sunLevel > 5 && tile.waterLevel > 5 && neighboringPlants >= 2) {
+        tile.growthLevel = Math.min(tile.growthLevel + 1, 3); // Max growth level 3
+        this.setTile(row, col, tile.sunLevel, tile.waterLevel, tile.plantType, tile.growthLevel);
+      }
+    }
+  }
+
+  getNeighbors(row, col) {
+    const directions = [
+      [-1, 0], // up
+      [1, 0], // down
+      [0, -1], // left
+      [0, 1], // right
+    ];
+
+    return directions
+      .map(([dRow, dCol]) => {
+        const nRow = row + dRow;
+        const nCol = col + dCol;
+        if (nRow >= 0 && nRow < this.rows && nCol >= 0 && nCol < this.cols) {
+          return this.getTile(nRow, nCol);
+        }
+        return null;
+      })
+      .filter((tile) => tile !== null);
+  }
 }
+
 
 class Platformer extends Phaser.Scene {
   constructor() {
     super("platformerScene");
     this.reapedFlowers = 0;
     this.waterLevel = 0;
+    this.grid = null;
+    this.stepsTaken = 0; // Step counter
+    this.won = false; // To track if the player has won
   }
 
   create() {
-    // Load the tilemap
+    // Grid dimensions
+    const rows = 10;
+    const cols = 10;
+
+    // Create and initialize the tile grid
+    this.grid = new TileGrid(rows, cols);
+
+    // Load tilemap and configure tileset
     this.map = this.add.tilemap("map");
-    this.tileset = this.map.addTilesetImage(
-      "tiny-town-packed",
-      "tiny_town_tiles",
-    );
-    this.grassLayer = this.map.createLayer(
-      "Grass-n-Houses",
-      this.tileset,
-      0,
-      0,
-    );
+    this.tileset = this.map.addTilesetImage("tiny-town-packed", "tiny_town_tiles");
+    this.grassLayer = this.map.createLayer("Grass-n-Houses", this.tileset, 0, 0);
     this.grassLayer.setScale(4);
 
-    // Define tile size (scaled)
-    this.TILE_SIZE = 16 * 4;
+    // Randomize tiles, including flowers
+    const flowerTileId = 3; // Replace with the actual ID for flower tiles in Tiled
+    this.grid.randomizeInnerTiles(this.map, this.grassLayer, flowerTileId);
 
-    // Add player sprite
+    // Player setup
+    this.TILE_SIZE = 16 * 4;
     this.player = this.add.sprite(
       this.TILE_SIZE * 5 + this.TILE_SIZE / 2,
       this.TILE_SIZE * 5 + this.TILE_SIZE / 2,
       "platformer_characters",
-      "tile_0000.png",
-    ).setScale(SCALE);
-
-    // Add keyboard controls
-    this.cursors = this.input.keyboard.createCursorKeys();
-    this.spaceKey = this.input.keyboard.addKey(
-      Phaser.Input.Keyboard.KeyCodes.SPACE,
-    );
+      "tile_0000.png"
+    ).setScale(2);
 
     // Movement state
     this.isMoving = false;
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    this.sKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
+    this.lKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.L);
 
-    // Move counter
-    this.moveCount = 0;
 
-    // Create a grid of Tile objects and corresponding tile indices
-    this.grid = [];
-    this.rows = this.map.height;
-    this.cols = this.map.width;
+    document.getElementById('description').innerHTML = '<h2>CMPM 121 Final Game</h2><br> Press <b> S </b> to save game. <br> <br>  Press <b> L </b> to load game.';
+  }
 
-    for (let row = 0; row < this.rows; row++) {
-      const gridRow = [];
-      for (let col = 0; col < this.cols; col++) {
-        gridRow.push(new Tile());
+  saveGame() {
+    const gameState = {
+      gridState: Array.from(this.grid.stateArray), // Convert to regular array to store in localStorage
+      playerPosition: {
+        x: this.player.x,
+        y: this.player.y,
+      },
+      stepsTaken: this.stepsTaken,
+      waterLevel: this.waterLevel,
+      reapedFlowers: this.reapedFlowers,
+      won: this.won,
+    };
+    localStorage.setItem('gameState', JSON.stringify(gameState));
+    console.log("Game saved!");
+  }
+
+  loadGame() {
+    const savedGameState = localStorage.getItem('gameState');
+    if (savedGameState) {
+      const gameState = JSON.parse(savedGameState);
+  
+      // Recreate the TileGrid instance
+      const rows = 10; // Use the same grid dimensions
+      const cols = 10;
+      this.grid = new TileGrid(rows, cols); // Recreate the grid instance
+      this.grid.stateArray = new Uint8Array(gameState.gridState); // Restore the state array
+  
+      // Restore player state (position)
+      this.player.setPosition(gameState.playerPosition.x, gameState.playerPosition.y);
+  
+      // Restore other game state
+      this.stepsTaken = gameState.stepsTaken;
+      this.waterLevel = gameState.waterLevel;
+      this.reapedFlowers = gameState.reapedFlowers;
+      this.won = gameState.won;
+  
+      // Reapply the grid state to the tilemap (rebuild the tiles based on the saved state)
+      this.rebuildTilemap();
+  
+      console.log("Game loaded!");
+  
+      // If the game was already won, display the win screen immediately
+      if (this.won) {
+        this.showWinScreen();
       }
-      this.grid.push(gridRow);
-    }
-
-    // Randomize all inner tiles initially
-    this.randomizeInnerTiles();
-  }
-
-  // Win condition: When 30 flowers have been reaped
-  checkWinCondition() {
-    if (this.reapedFlowers >= 20) {
-        console.log("You win!");
+    } else {
+      console.log("No saved game found.");
     }
   }
-
-  // Utility to find neighboring tiles
-  getNeighbors(row, col) {
-    const neighbors = [];
-    const directions = [
-        [-1, 0], // up
-        [1, 0],  // down
-        [0, -1], // left
-        [0, 1],  // right
-    ];
-
-    directions.forEach(([dRow, dCol]) => {
-        const nRow = row + dRow;
-        const nCol = col + dCol;
-        // Check if neighbor is within bounds
-        if (
-            nRow >= 0 &&
-            nRow < this.rows &&
-            nCol >= 0 &&
-            nCol < this.cols
-        ) {
-            neighbors.push(this.grid[nRow][nCol]); // Add valid neighbor
-        }
+  
+  showWinScreen() {
+    const winText = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, "You Win!", {
+      fontSize: "64px",
+      fill: "#00000",
     });
-    return neighbors; // Ensure neighbors is always an array
-}
+    winText.setOrigin(0.5); // Center the text
+  }
 
-
-  randomizeInnerTiles() {
-    const tileOptions = [3, 26]; // Example: grass (3) and flower (26)
-
-    for (let row = 1; row < this.rows - 1; row++) {
-      for (let col = 1; col < this.cols - 1; col++) {
-        const randomTileIndex =
-          tileOptions[Math.floor(Math.random() * tileOptions.length)];
-        this.map.putTileAt(randomTileIndex, col, row, this.grassLayer);
-
-        // Reflect in the grid as well
-        if (randomTileIndex === 26) {
-          this.grid[row][col].growthLevel = 2; // Flowers start with growth level 2
+  rebuildTilemap() {
+    // Loop through the grid but skip the first and last row and column (edges)
+    for (let row = 1; row < this.grid.rows - 1; row++) {
+      for (let col = 1; col < this.grid.cols - 1; col++) {
+        const tile = this.grid.getTile(row, col);
+        const index = this.grid.getIndex(row, col);
+  
+        // Reapply the saved tile state to the grid
+        const savedTile = this.grid.stateArray.slice(index, index + this.grid.tileSize);
+        const sunLevel = savedTile[0];
+        const waterLevel = savedTile[1];
+        const plantTypeIndex = savedTile[2];
+        const growthLevel = savedTile[3];
+  
+        // Update grid state
+        this.grid.setTile(row, col, sunLevel, waterLevel, this.grid.plantTypes[plantTypeIndex], growthLevel);
+  
+        // Determine the tile ID based on the plant type and growth state
+        let tileId = 26; // Default ID for empty/regular ground tile
+  
+        // Map plant types to tile IDs based on growth level or other conditions
+        if (this.grid.plantTypes[plantTypeIndex] === "species1") {
+          if (growthLevel > 0) {
+            tileId = 3; // Flower tile (species1) with growth
+          } else {
+            tileId = 26; // Placeholder for no growth (or reaped flower)
+          }
+        } else if (this.grid.plantTypes[plantTypeIndex] === "species2") {
+          tileId = 4; // Tile ID for species2
+        } else if (this.grid.plantTypes[plantTypeIndex] === "species3") {
+          tileId = 5; // Tile ID for species3
+        } else if (this.grid.plantTypes[plantTypeIndex] === "dirt") {
+          tileId = 26; // Tile ID for dirt (no plant)
         }
+  
+        // Apply the tile ID to the map for the inner tiles
+        this.map.putTileAt(tileId, col, row, true, this.grassLayer);
       }
     }
   }
-
-  generateFlowerTile() {
-    const flowerTileIndex = 3;
-    const randomRow = Phaser.Math.Between(1, this.rows - 2);
-    const randomCol = Phaser.Math.Between(1, this.cols - 2);
-
-    this.map.putTileAt(flowerTileIndex, randomCol, randomRow, this.grassLayer);
-    this.grid[randomRow][randomCol].growthLevel = 2; // Set flower growth level
-  }
+  
+  
+  
+  
+  
 
   movePlayer(deltaX, deltaY) {
-    const newX = this.player.x + deltaX * this.TILE_SIZE;
-    const newY = this.player.y + deltaY * this.TILE_SIZE;
+    const currentRow = Math.floor(this.player.y / this.TILE_SIZE);
+    const currentCol = Math.floor(this.player.x / this.TILE_SIZE);
+    
+    const newRow = currentRow + deltaY;
+    const newCol = currentCol + deltaX;
 
-    const canvasWidth = game.config.width;
-    const canvasHeight = game.config.height;
-    const halfTile = this.TILE_SIZE / 2;
+    if (newRow >= 0 && newRow < this.grid.rows && newCol >= 0 && newCol < this.grid.cols) {
+      const newX = newCol * this.TILE_SIZE + this.TILE_SIZE / 2;
+      const newY = newRow * this.TILE_SIZE + this.TILE_SIZE / 2;
 
-    if (
-      newX - halfTile < 0 ||
-      newX + halfTile > canvasWidth ||
-      newY - halfTile < 0 ||
-      newY + halfTile > canvasHeight
-    ) {
-      this.isMoving = false;
-      return;
+      this.tweens.add({
+        targets: this.player,
+        x: newX,
+        y: newY,
+        duration: 200,
+        onComplete: () => {
+          this.isMoving = false;
+          this.stepsTaken++;
+
+          if (this.stepsTaken >= 5) {
+            this.generateNewFlower();
+            this.stepsTaken = 0; // Reset step counter
+            this.waterLevel += 2; // Adds 2 water every turn
+          }
+
+          this.updateTiles();
+
+          const tile = this.grid.getTile(newRow, newCol);
+          console.log(`Tile at (${newRow}, ${newCol}):
+Sun Level: ${tile.sunLevel}
+Water Level: ${tile.waterLevel}
+Plant Type: ${tile.plantType}
+Growth Level: ${tile.growthLevel}`);
+        },
+      });
     }
+  }
 
-    this.tweens.add({
-      targets: this.player,
-      x: newX,
-      y: newY,
-      duration: 200,
-      onComplete: () => {
-        this.isMoving = false;
-        this.updateTiles(); // Update tiles after player moves
-        
-      },
-    });
+  generateNewFlower() {
+    let row, col;
+    let tile;
 
-    this.moveCount++;
+    do {
+      row = Math.floor(Math.random() * this.grid.rows);
+      col = Math.floor(Math.random() * this.grid.cols);
+      tile = this.grid.getTile(row, col);
+    } while (tile.plantType === "species1");
 
-    // After 5 moves, generate a flower tile
-    if (this.moveCount >= 5) {
-      this.generateFlowerTile();
-      this.moveCount = 0;
-
-      // Update levels for all tiles in the grid
-      this.grid.forEach((row) =>
-        row.forEach((tile) => {
-            tile.updateLevels();
-        })
-      );
-      console.log("New Sun, Water, Species, and Growth Levels!");
-    }
+    this.grid.setTile(row, col, 5, 5, "species1", 2);
+    this.map.putTileAt(3, col, row, true, this.grassLayer); 
+    console.log(`New flower generated at (${row}, ${col})!`);
   }
 
   updateTiles() {
-    // Update sun, water, and growth levels for each tile
-    this.grid.forEach((row, rowIndex) =>
-        row.forEach((tile, colIndex) => {
-            const neighbors = this.getNeighbors(rowIndex, colIndex);
-            //console.log(`Tile [${rowIndex}, ${colIndex}] has ${neighbors.length} neighbors`);
-            tile.updateGrowthLevel(neighbors);
-        })
-    );
+    for (let row = 0; row < this.grid.rows; row++) {
+      for (let col = 0; col < this.grid.cols; col++) {
+        const neighbors = this.grid.getNeighbors(row, col);
+        this.grid.updateTile(row, col, neighbors);
+      }
+    }
+  }
 
-    // Check completion conditions
-    if (this.checkWinCondition()) {
+  getPlayerTilePosition() {
+    const playerX = this.player.x;
+    const playerY = this.player.y;
+  
+    const row = Math.floor(playerY / this.TILE_SIZE);
+    const col = Math.floor(playerX / this.TILE_SIZE);
+  
+    return { row, col };
+  }
+
+  checkWinCondition() {
+    if (this.reapedFlowers >= 1 && !this.won) {
+      this.won = true; // Set the won flag to true
       console.log("You win!");
-      // Optionally: Restart game or proceed to the next level
+      // Display win message
+      const winText = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, "You Win!", {
+        fontSize: "64px",
+        fill: "#00000",
+      });
+      winText.setOrigin(0.5); // Center the text
     }
   }
 
   update() {
     if (!this.isMoving) {
-        if (this.cursors.left.isDown) {
-            this.isMoving = true;
-            this.movePlayer(-1, 0);
-            this.player.setFlipX(false);
-        } else if (this.cursors.right.isDown) {
-            this.isMoving = true;
-            this.movePlayer(1, 0);
-            this.player.setFlipX(true);
-        } else if (this.cursors.up.isDown) {
-            this.isMoving = true;
-            this.movePlayer(0, -1);
-        } else if (this.cursors.down.isDown) {
-            this.isMoving = true;
-            this.movePlayer(0, 1);
-        }
+      if (this.cursors.left.isDown) {
+        this.isMoving = true;
+        this.movePlayer(-1, 0);
+        this.player.setFlipX(false);
+      } else if (this.cursors.right.isDown) {
+        this.isMoving = true;
+        this.movePlayer(1, 0);
+        this.player.setFlipX(true);
+      } else if (this.cursors.up.isDown) {
+        this.isMoving = true;
+        this.movePlayer(0, -1);
+      } else if (this.cursors.down.isDown) {
+        this.isMoving = true;
+        this.movePlayer(0, 1);
+      }
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
-        const playerTileX = Math.floor(this.player.x / this.TILE_SIZE);
-        const playerTileY = Math.floor(this.player.y / this.TILE_SIZE);
+    if (this.spaceKey.isDown) {
+      const { row, col } = this.getPlayerTilePosition();
+      const tile = this.grid.getTile(row, col);
+    
+      if (tile.plantType === "species1" && tile.growthLevel === 3) { // Flower is ready to be reaped
+        this.waterLevel += tile.waterLevel;
+        this.map.putTileAt(26, col, row, true, this.grassLayer); // Update tilemap to show the flower has been reaped
 
-        const tile = this.map.getTileAt(
-            playerTileX,
-            playerTileY,
-            true,
-            this.grassLayer
-        );
+        // Update grid to reflect reaped state
+        this.grid.setTile(row, col, tile.sunLevel, tile.waterLevel, "species1", 0); // Set to a "reaped" state (growthLevel 0)
+        this.reapedFlowers++; // Increment reaped flowers count
+        console.log(`Flowers Reaped: ${this.reapedFlowers}, Water Count: ${this.waterLevel}`);
 
-        if (tile && tile.index === 3) {
-            // Access the tile object in the grid
-            const currentTile = this.grid[playerTileY][playerTileX];
-            const waterCount = currentTile.waterLevel;
-            const sunLevel = currentTile.sunLevel;
-            const growthLevel = currentTile.growthLevel;
-            const plantType = currentTile.plantType;
+        this.checkWinCondition(); // Check win condition after each reap
 
-            // Log the current tile's state
-            console.log(`Flower: Sun = ${sunLevel}, Water = ${waterCount}, Growth = ${growthLevel}, Species = ${plantType}`);
+        this.spaceKey.reset(); // Reset the spacebar input
+      }
+    }
 
-            // Change the tile to a different type (e.g., grass)
-            this.map.putTileAt(26, playerTileX, playerTileY, true, this.grassLayer);
-
-            // Increment reaped flowers counter
-            this.reapedFlowers+= 1;
-
-            // Increment water level counter
-            this.waterLevel += waterCount;
-
-            console.log('Water Count:', this.waterLevel);
-
-            // Check win condition after reaping
-            this.checkWinCondition();
-
-        } else {
-            // Log tile details even if it's not a flower
-            const currentTile = this.grid[playerTileY][playerTileX];
-            const waterCount = currentTile.waterLevel;
-            const sunLevel = currentTile.sunLevel;
-            const growthLevel = currentTile.growthLevel;
-
-            console.log(`Non-Flower: Sun = ${sunLevel}, Water = ${waterCount}, Growth = ${growthLevel}`);
-
-            this.waterLevel += waterCount;
-
-            console.log('Water Count:', this.waterLevel);
-        }
+    if (this.sKey.isDown){
+      console.log("Saving Game!")
+      this.sKey.reset();
+      this.saveGame(); 
+    }
+    
+    if (this.lKey.isDown){
+      console.log("Loading Game!")
+      this.lKey.reset();
+      this.loadGame(); 
     }
   }
-
 }
+
