@@ -197,6 +197,7 @@ class Platformer extends Phaser.Scene {
     }
   }
   
+  // Text to say you won after loading a state.
   showWinScreen() {
     const winText = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, "You Win!", {
       fontSize: "64px",
@@ -204,6 +205,7 @@ class Platformer extends Phaser.Scene {
     });
     winText.setOrigin(0.5); // Center the text
   }
+
 
   rebuildTilemap() {
     // Loop through the grid but skip the first and last row and column (edges)
@@ -325,7 +327,7 @@ Growth Level: ${tile.growthLevel}`);
   }
 
   checkWinCondition() {
-    if (this.reapedFlowers >= 1 && !this.won) {
+    if (this.reapedFlowers >= 3 && !this.won) { // Temperary 3 reaped.
       this.won = true; // Set the won flag to true
       console.log("You win!");
       // Display win message
