@@ -4,6 +4,7 @@ class TileGrid {
     this.cols = cols;
     this.totalTiles = rows * cols;
 
+
     // Byte array format: [sunLevel, waterLevel, plantType, growthLevel] per tile
     this.tileSize = 4; // Number of attributes per tile
     this.stateArray = new Uint8Array(this.totalTiles * this.tileSize);
@@ -38,6 +39,7 @@ class TileGrid {
     } else {
       this.stateArray[index + 2] = 3; // Set to "dirt"
       this.stateArray[index + 3] = 0; // No growth for dirt
+      
     }
   }
 
@@ -107,6 +109,10 @@ class Platformer extends Phaser.Scene {
     this.grid = null;
     this.stepsTaken = 0; // Step counter
     this.won = false; // To track if the player has won
+
+    //undo and redo stacks
+    this.undoStack = [];
+    this.redoStack = [];
   }
 
   create() {
@@ -143,13 +149,19 @@ class Platformer extends Phaser.Scene {
       this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
       this.sKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
       this.lKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.L);
+
+      //undo and redo keys
+      this.zKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
+      this.yKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Y);
+
+
   
       // Check for auto-save on game start
       this.checkAutoSave();
-      this.startAutoSave();
+      //this.startAutoSave();
     }
 
-    startAutoSave() {
+    /*startAutoSave() {
       console.log("Game saved Automatically!");
       this.autoSaveInterval = setInterval(() => {
         this.autoSaveGame();
@@ -159,7 +171,7 @@ class Platformer extends Phaser.Scene {
     shutdown() {
       clearInterval(this.autoSaveInterval); // Clear the auto-save interval when the scene is shut down
     }
-  
+    */
     saveGame(saveKey = 'gameState') {
       const gameState = {
         gridState: Array.from(this.grid.stateArray), // Convert to regular array to store in localStorage
@@ -174,6 +186,13 @@ class Platformer extends Phaser.Scene {
       };
       localStorage.setItem(saveKey, JSON.stringify(gameState));
       console.log("Game saved!");
+    
+      // Save current state to undo stack
+      this.undoStack.push(JSON.stringify(gameState));
+      console.log("State pushed to undoStack:", this.undoStack);
+      // Clear redo stack on new save
+      this.redoStack = [];
+      console.log("Redo stack cleared");
     }
   
     autoSaveGame() {
@@ -277,6 +296,7 @@ class Platformer extends Phaser.Scene {
         this.map.putTileAt(tileId, col, row, true, this.grassLayer);
       }
     }
+
   }
   
   
@@ -285,6 +305,24 @@ class Platformer extends Phaser.Scene {
   
 
   movePlayer(deltaX, deltaY) {
+    // Save current state to undo stack before moving
+    const currentState = {
+      gridState: Array.from(this.grid.stateArray),
+      playerPosition: {
+        x: this.player.x,
+        y: this.player.y,
+      },
+      stepsTaken: this.stepsTaken,
+      waterLevel: this.waterLevel,
+      reapedFlowers: this.reapedFlowers,
+      won: this.won,
+    };
+    this.undoStack.push(JSON.stringify(currentState));
+    console.log("State pushed to undoStack:", this.undoStack);
+    // Clear redo stack on new action
+    this.redoStack = [];
+    console.log("Redo stack cleared");
+
     const currentRow = Math.floor(this.player.y / this.TILE_SIZE);
     const currentCol = Math.floor(this.player.x / this.TILE_SIZE);
     
@@ -311,6 +349,11 @@ class Platformer extends Phaser.Scene {
           }
 
           this.updateTiles();
+
+          // Auto-save every 4 steps
+          if (this.stepsTaken % 4 === 0) {
+            this.autoSaveGame();
+          }
 
           const tile = this.grid.getTile(newRow, newCol);
           console.log(`Tile at (${newRow}, ${newCol}):
@@ -355,6 +398,64 @@ Growth Level: ${tile.growthLevel}`);
     const col = Math.floor(playerX / this.TILE_SIZE);
   
     return { row, col };
+  }
+
+  undo() {
+    if (this.undoStack.length > 0) {
+      const currentState = {
+        gridState: Array.from(this.grid.stateArray),
+        playerPosition: {
+          x: this.player.x,
+          y: this.player.y,
+        },
+        stepsTaken: this.stepsTaken,
+        waterLevel: this.waterLevel,
+        reapedFlowers: this.reapedFlowers,
+        won: this.won,
+      };
+      this.redoStack.push(JSON.stringify(currentState));
+      console.log("State pushed to redoStack:", this.redoStack);
+
+      const previousState = JSON.parse(this.undoStack.pop());
+      this.loadState(previousState);
+      console.log("Undo performed! Current undoStack:", this.undoStack);
+    } else {
+      console.log("No more actions to undo.");
+    }
+  }
+  
+  redo() {
+    if (this.redoStack.length > 0) {
+      const currentState = {
+        gridState: Array.from(this.grid.stateArray),
+        playerPosition: {
+          x: this.player.x,
+          y: this.player.y,
+        },
+        stepsTaken: this.stepsTaken,
+        waterLevel: this.waterLevel,
+        reapedFlowers: this.reapedFlowers,
+        won: this.won,
+      };
+      this.undoStack.push(JSON.stringify(currentState));
+      console.log("State pushed to undoStack:", this.undoStack);
+
+      const nextState = JSON.parse(this.redoStack.pop());
+      this.loadState(nextState);
+      console.log("Redo performed! Current redoStack:", this.redoStack);
+    } else {
+      console.log("No more actions to redo.");
+    }
+  }
+  
+  loadState(state) {
+    this.grid.stateArray = new Uint8Array(state.gridState);
+    this.player.setPosition(state.playerPosition.x, state.playerPosition.y);
+    this.stepsTaken = state.stepsTaken;
+    this.waterLevel = state.waterLevel;
+    this.reapedFlowers = state.reapedFlowers;
+    this.won = state.won;
+    this.rebuildTilemap();
   }
 
   checkWinCondition() {
@@ -418,6 +519,14 @@ Growth Level: ${tile.growthLevel}`);
       console.log("Loading Game!")
       this.lKey.reset();
       this.loadGame(); 
+    }
+
+    if (Phaser.Input.Keyboard.JustDown(this.zKey)) {
+      this.undo();
+    }
+
+    if (Phaser.Input.Keyboard.JustDown(this.yKey)) {
+      this.redo();
     }
   }
 }
