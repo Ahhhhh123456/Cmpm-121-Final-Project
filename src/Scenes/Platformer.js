@@ -147,7 +147,12 @@ class Platformer extends Phaser.Scene {
       this.isMoving = false;
       this.cursors = this.input.keyboard.createCursorKeys();
       this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-      this.sKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
+
+      //save keys
+      this.oneKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ONE);
+      this.twoKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TWO);
+
+      // load keys
       this.lKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.L);
 
       //undo and redo keys
@@ -172,7 +177,7 @@ class Platformer extends Phaser.Scene {
       clearInterval(this.autoSaveInterval); // Clear the auto-save interval when the scene is shut down
     }
     */
-    saveGame(saveKey = 'gameState') {
+    saveGame(saveKey = "gameStateSlot1") {
       const gameState = {
         gridState: Array.from(this.grid.stateArray), // Convert to regular array to store in localStorage
         playerPosition: {
@@ -185,8 +190,10 @@ class Platformer extends Phaser.Scene {
         won: this.won,
       };
       localStorage.setItem(saveKey, JSON.stringify(gameState));
-      console.log("Game saved!");
+      console.log(`Game saved to ${saveKey}!`);
     
+
+      
       // Save current state to undo stack
       this.undoStack.push(JSON.stringify(gameState));
       console.log("State pushed to undoStack:", this.undoStack);
@@ -213,37 +220,26 @@ class Platformer extends Phaser.Scene {
 
 
 
-  loadGame() {
-    const savedGameState = localStorage.getItem('gameState');
+  loadGame(saveKey = "gameStateSlot1") {
+    const savedGameState = localStorage.getItem(saveKey);
     if (savedGameState) {
       const gameState = JSON.parse(savedGameState);
   
-      // Recreate the TileGrid instance
-      const rows = 10; // Use the same grid dimensions
-      const cols = 10;
-      this.grid = new TileGrid(rows, cols); // Recreate the grid instance
-      this.grid.stateArray = new Uint8Array(gameState.gridState); // Restore the state array
-  
-      // Restore player state (position)
+      this.grid.stateArray = new Uint8Array(gameState.gridState);
       this.player.setPosition(gameState.playerPosition.x, gameState.playerPosition.y);
-  
-      // Restore other game state
       this.stepsTaken = gameState.stepsTaken;
       this.waterLevel = gameState.waterLevel;
       this.reapedFlowers = gameState.reapedFlowers;
       this.won = gameState.won;
   
-      // Reapply the grid state to the tilemap (rebuild the tiles based on the saved state)
       this.rebuildTilemap();
-  
-      console.log("Game loaded!");
-  
-      // If the game was already won, display the win screen immediately
+      console.log(`Game loaded from ${saveKey}!`);
+      
       if (this.won) {
         this.showWinScreen();
       }
     } else {
-      console.log("No saved game found.");
+      console.log(`No save state found for ${saveKey}.`);
     }
   }
   
@@ -298,11 +294,6 @@ class Platformer extends Phaser.Scene {
     }
 
   }
-  
-  
-  
-  
-  
 
   movePlayer(deltaX, deltaY) {
     // Save current state to undo stack before moving
@@ -509,16 +500,21 @@ Growth Level: ${tile.growthLevel}`);
       }
     }
 
-    if (this.sKey.isDown){
-      console.log("Saving Game!")
-      this.sKey.reset();
-      this.saveGame(); 
+    if (Phaser.Input.Keyboard.JustDown(this.oneKey)) {
+      console.log("Saving to Slot 1!");
+      this.saveGame("gameStateSlot1");
     }
     
-    if (this.lKey.isDown){
-      console.log("Loading Game!")
-      this.lKey.reset();
-      this.loadGame(); 
+    if (Phaser.Input.Keyboard.JustDown(this.twoKey)) {
+      console.log("Saving to Slot 2!");
+      this.saveGame("gameStateSlot2");
+    }
+    
+    if (Phaser.Input.Keyboard.JustDown(this.lKey)) {
+      const loadSlot = prompt("Enter save slot to load (1 or 2):");
+      const saveKey = loadSlot === "2" ? "gameStateSlot2" : "gameStateSlot1";
+      console.log(`Loading from ${saveKey}!`);
+      this.loadGame(saveKey);
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.zKey)) {
