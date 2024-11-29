@@ -101,7 +101,7 @@ We made it so that once all the flowers on the screen were gone, the game ended 
 The whole point is to make sure all the flowers die, and can no longer grow back.
 
 [F1.a]
-We implemented our game state as an Structure-of-Arrays (SoA) byte array format. The grid data is stored in a single contiguous Uint8Array, and each type of grid attribute (e.g., sun level, water level, plant type, and growth level) is encoded separately in specific offsets within the array.
+We implemented our game state as an Structure-of-Arrays (SoA) byte array format. The grid data is stored in a single contiguous Uint8Array, and each type of grid attribute (e.g., sun level, water level, plant type, and growth level) is encoded separately in specific offsets within the array. ![F1.a data structure diagram](./array_struct.png)
 
 
 [F1.b]
