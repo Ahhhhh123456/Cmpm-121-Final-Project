@@ -100,8 +100,23 @@ If the value for the sun level is greater than 5, the value for the water level 
 We made it so that once all the flowers on the screen were gone, the game ended and you won. 
 The whole point is to make sure all the flowers die, and can no longer grow back.
 
+[F1.a]
+We implemented our game state as an Structure-of-Arrays (SoA) byte array format. The grid data is stored in a single contiguous Uint8Array, and each type of grid attribute (e.g., sun level, water level, plant type, and growth level) is encoded separately in specific offsets within the array.
 
+
+[F1.b]
+The player can choose to manually save their game state in either slot 1 or 2 by pressing keyboard keys 1 or 2.
+
+[F1.c]
+The game calls the auto-save function every 4 steps.
+On startup, the game checks if an auto-save entry is present by calling the checkAutoSave method.
+If an auto-save entry is found, the game prompts the player with a confirmation dialog:
+"Do you want to continue where you left off?"
+If the player agrees, the game loads the auto-save state using the loadGame method.
+
+[F1.d]
+The player can press z to undo or y to redo actions.
 # Reflection
 For our tools and materials, we are staying with Phaser and JavaScript and moving to Typescript and Deno. As for roles, we’re working perfectly fine. 
 For F0, we split the work evenly between us 3. This made it so that we worked on F0 on our own time. This made it hard for us to make everything work all at once. 
-We eventually solved it after several iterations of fixing it
+We eventually solved it after several iterations of fixing it. 
