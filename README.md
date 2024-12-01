@@ -117,22 +117,22 @@ We eventually solved it after several iterations of fixing it.
 * [F0.a] - same as last week
 
 
-* [F0.b] - same as last week
+* [F0.b] - We increased the turn to 5 and the growth level of all plants would increase.
 
 
-* [F0.c] - same as last week
+* [F0.c] - We made it so that you can only reap when the growth level of a plant is level 3
 
 
 * [F0.d] - same as last week
 
 
-* [F0.e] - same as last week
+* [F0.e] - Added the actual "sprites" of the 3 types of species
 
 
 * [F0.f] - same as last week
 
 
-* [F0.g] - same as last week
+* [F0.g] - We made it so that instead of clearing all the species, you would need to reap a certain amount of them to win
 
 
 * [F1.a] - 
