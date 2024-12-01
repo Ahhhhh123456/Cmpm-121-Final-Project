@@ -66,57 +66,104 @@ unable to use keyboard and mouse due to limitations with their body
 
 # How we satisfied the software requirements
 
-[F0.a]
+* [F0.a] - 
 We created a 2d grid using tiles in Phaser, we made a randomizer, that spits out a randomized array of tiles that makes a board with plants everywhere. 
 We then used cursor.is.down on the arrow keys so the player is able to move around, up, down, left, and right.
 
 
-[F0.b] 
+* [F0.b] - 
 We implemented a manual time that is turn-based by making it so that every 3 steps the player takes a flower will appear. 
 This simulates a turn-based as every player has as much time as they want every turn to play their next turn.
 
 
-[F0.c] 
+* [F0.c] -
 We made it so that when you press the space bar you reap a plant. 
 The plant gets removed from the plot, one space bar press will remove the plan on the grid you are currently on.
 
 
-[F0.d] 
+* [F0.d] -
 We implemented the water levels by randomly generating a number 1-10 every turn, the number then gets added to the water number and the water number will just keep increasing. 
 Furthermore, the sun level is randomly generated but not added to the value, the value gets reassigned every turn based on what the randomizer came up with.  
 
 
-[F0.e] 
+* [F0.e] -
 We implemented 3 different growth levels by making a function that checks the water and sun levels, and if there are neighboring plants, and increments them accordingly. 
 Additionally, we added plant types that get assigned to the plants when they are created. 
 
 
-[F0.f] Simple spatial rules govern plant growth based on sun, water, and nearby plants (growth is unlocked by satisfying conditions).
+* [F0.f] - 
+Simple spatial rules govern plant growth based on sun, water, and nearby plants (growth is unlocked by satisfying conditions).
 We made the growth by making a function that checks the nearby tiles for plant growth, in addition to whether there is sun and water.  
 If the value for the sun level is greater than 5, the value for the water level is 5, and a number of adjacent plants is greater than or equal to 2. Then the the growth factor will grow by one. 
 
 
-[F0.g] 
+* [F0.g] - 
 We made it so that once all the flowers on the screen were gone, the game ended and you won. 
 The whole point is to make sure all the flowers die, and can no longer grow back.
 
-[F1.a]
+
+# Reflection
+For our tools and materials, we are staying with Phaser and JavaScript and moving to Typescript and Deno. As for roles, we’re working perfectly fine. 
+For F0, we split the work evenly between us 3. This made it so that we worked on F0 on our own time. This made it hard for us to make everything work all at once. 
+We eventually solved it after several iterations of fixing it. 
+
+
+# F1 Devlog
+
+
+# How we satisfied the software requirements
+
+
+* [F0.a] - same as last week
+
+
+* [F0.b] - same as last week
+
+
+* [F0.c] - same as last week
+
+
+* [F0.d] - same as last week
+
+
+* [F0.e] - same as last week
+
+
+* [F0.f] - same as last week
+
+
+* [F0.g] - same as last week
+
+
+* [F1.a] - 
 We implemented our game state as an Structure-of-Arrays (SoA) byte array format. The grid data is stored in a single contiguous Uint8Array, and each type of grid attribute (e.g., sun level, water level, plant type, and growth level) is encoded separately in specific offsets within the array. ![F1.a data structure diagram](./array_struct.png)
 
 
-[F1.b]
+* [F1.b] - 
 The player can choose to manually save their game state in either slot 1 or 2 by pressing keyboard keys 1 or 2.
 
-[F1.c]
+
+* [F1.c] - 
 The game calls the auto-save function every 4 steps.
 On startup, the game checks if an auto-save entry is present by calling the checkAutoSave method.
 If an auto-save entry is found, the game prompts the player with a confirmation dialog:
 "Do you want to continue where you left off?"
 If the player agrees, the game loads the auto-save state using the loadGame method.
 
-[F1.d]
+
+* [F1.d] - 
 The player can press z to undo or y to redo actions.
+
+
 # Reflection
-For our tools and materials, we are staying with Phaser and JavaScript and moving to Typescript and Deno. As for roles, we’re working perfectly fine. 
-For F0, we split the work evenly between us 3. This made it so that we worked on F0 on our own time. This made it hard for us to make everything work all at once. 
-We eventually solved it after several iterations of fixing it. 
+
+
+For our tools and materials, it has pretty much stayed the same. Besides that, the code we wrote had to be almost entirely revamped due to the making of an array structure which did end up making our code more optimized. Because of the revamp, it was hard for us to reimplement all of f0 back into our game. Luckily, we were able to do that and it turned out to work perfectly fine once we made our array sutrcture. Overall, we didn't believe that changing our roles was neccessary but it was definitely harder than last week as we only ended up with very little of the original code from f0.
+
+
+# F2 Devlog
+
+
+# How we satisfied the software requirements
+
+Work in progress
