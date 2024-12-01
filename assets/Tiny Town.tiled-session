@@ -3,7 +3,7 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "Tiny Town.tmx",
+    "activeFile": "",
     "expandedProjectPaths": [
         "."
     ],
@@ -16,8 +16,8 @@
             "scale": 2.44,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 38.114754098360656,
-                "y": 85.04098360655738
+                "x": 37.90983606557377,
+                "y": 84.6311475409836
             }
         },
         "Tiny Town.tmx#tiny-town-packed": {

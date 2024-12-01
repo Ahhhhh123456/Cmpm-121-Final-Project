@@ -1,6 +1,12 @@
 "use strict";
 
-// Game config
+import { PlantGrowthManager } from './GameLogic/PlantManager.js'; // Correct import
+
+// Initialize the PlantGrowthManager
+let growthManager = new PlantGrowthManager();
+
+
+// Game configuration (Phaser setup)
 let config = {
   parent: "phaser-game",
   type: Phaser.CANVAS,
@@ -19,19 +25,13 @@ var my = { sprite: {}, text: {}, vfx: {} };
 // Create the Phaser game instance
 const game = new Phaser.Game(config);
 
-// Load events YAML when the game starts
+// Load events from external YAML file
 function loadEvents() {
-  fetch('assets/events.yaml')  // Change the file path to events.yaml
-    .then(response => response.text())  // Get the raw YAML as text
+  fetch('assets/events.yaml') // Change this path if necessary
+    .then(response => response.text())  // Fetch the file as text
     .then(yamlText => {
-      try {
-        // Parse YAML text into a JavaScript object
-        const data = jsyaml.load(yamlText);
-        // Handle events when they're loaded
-        handleEvents(data.events);  // Adjusted to handle 'events' key in YAML
-      } catch (error) {
-        console.error('Error parsing YAML:', error);
-      }
+      const events = jsyaml.load(yamlText); // Parse YAML content
+      handleEvents(events);  // Handle events after loading
     })
     .catch(error => console.error('Error loading events:', error));
 }
@@ -40,30 +40,45 @@ function loadEvents() {
 function handleEvents(events) {
   events.forEach(event => {
     console.log(`Event: ${event.event}, Time: ${event.time}, Action: ${event.action}`);
-    
-    // Handle different events
+
+    // Handling plant growth
     if (event.event === "Grow plants") {
       setTimeout(() => {
         console.log("Growing plants!");
-        // Implement plant growth logic
-      }, event.time * 1000); // Time in seconds
+        growthManager.plants.forEach(plant => plant.grow()); // Grow all plants
+      }, event.time * 1000); // Convert time to milliseconds
     }
 
+    // Handling flower generation
     if (event.event === "Generate flower") {
       setTimeout(() => {
         console.log("Generating a new flower!");
-        // Implement flower generation logic
+        growthManager.addPlant("Flower");  // Add a new flower to the manager
       }, event.time * 1000);
     }
 
+    // Handling water level increase
     if (event.event === "Increase water level") {
       setTimeout(() => {
         console.log("Increasing water level by 2!");
-        // Implement water level increase logic
+        growthManager.waterPlant(0); // Water the first plant (for example)
       }, event.time * 1000);
     }
   });
 }
 
-// Load events when the game is ready
+// Start the game and load events
 loadEvents();
+
+// Example: Add some plants manually
+growthManager.addPlant("Flower");
+growthManager.addPlant("Tree");
+growthManager.addPlant("Cactus");
+
+// Simulate growth over time (e.g., in your game loop or with setInterval)
+setInterval(() => {
+  growthManager.updateGrowth();  // Update growth for each plant
+}, 1000); // Update every second
+
+// Simulate watering a plant (could be triggered by events as well)
+growthManager.waterPlant(0);  // Water the first plant (Flower)
